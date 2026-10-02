@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Hide My Pass",
+  "version": "1.0.0",
+  "description": "Hides (deletes, replaces or blurs) texts you choose on websites you choose. Your list is encrypted with a master password.",
+  "permissions": ["storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js",
+    "scripts": ["vault.js", "background.js"]
+  },
+  "action": { "default_title": "Hide My Pass", "default_popup": "popup.html" },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": { "id": "hide-my-pass@shararrs.example", "strict_min_version": "115.0" }
+  }
+}
