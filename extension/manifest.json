@@ -1,15 +1,27 @@
 {
   "manifest_version": 3,
-  "name": "Hide My Pass",
+  "name": "Hide My Text",
   "version": "1.0.0",
+  "icons": {
+    "16": "images/hide-my-text-16.png",
+    "32": "images/hide-my-text-32.png",
+    "48": "images/hide-my-text-48.png",
+    "128": "images/hide-my-text-128.png"
+  },
   "description": "Hides (deletes, replaces or blurs) texts you choose on websites you choose. Your list is encrypted with a master password.",
   "permissions": ["storage"],
   "host_permissions": ["<all_urls>"],
-  "background": {
-    "service_worker": "background.js",
-    "scripts": ["vault.js", "background.js"]
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_title": "Hide My Text",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/hide-my-text-16.png",
+      "32": "images/hide-my-text-32.png",
+      "48": "images/hide-my-text-48.png",
+      "128": "images/hide-my-text-128.png"
+    }
   },
-  "action": { "default_title": "Hide My Pass", "default_popup": "popup.html" },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -18,8 +30,5 @@
       "all_frames": true,
       "match_about_blank": true
     }
-  ],
-  "browser_specific_settings": {
-    "gecko": { "id": "hide-my-pass@shararrs.example", "strict_min_version": "115.0" }
-  }
+  ]
 }

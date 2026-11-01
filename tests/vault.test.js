@@ -10,6 +10,12 @@ test("encrypt/decrypt round trip with master password", async () => {
   assert.notStrictEqual(next.iv, record.iv);
   assert.ok(!JSON.stringify(record).includes("secret"));
 });
+
+test("absurd iteration counts in a stored record are rejected", async () => {
+  const { record } = await Vault.create("correct horse", ["x"], 1000);
+  await assert.rejects(Vault.open("correct horse", { ...record, iterations: 4e9 }), /Invalid vault record/);
+  await assert.rejects(Vault.open("correct horse", { ...record, iterations: "1000" }), /Invalid vault record/);
+});
 
 test("wrong password and tampering are rejected", async () => {
   const { record } = await Vault.create("correct horse", ["x"], 1000);

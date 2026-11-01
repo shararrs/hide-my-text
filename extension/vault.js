@@ -11,7 +11,11 @@
   };
   const unb64 = (str) => Uint8Array.from(atob(str), (c) => c.charCodeAt(0));
 
+  // The record lives in extension storage; refuse absurd values that would hang the worker.
+  const MAX_ITERATIONS = 10000000;
+
   async function deriveKey(password, salt, iterations = ITERATIONS) {
+    if (!Number.isInteger(iterations) || iterations < 1 || iterations > MAX_ITERATIONS) throw new Error("Invalid vault record");
     const base = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
     return crypto.subtle.deriveKey(
       { name: "PBKDF2", salt, iterations, hash: "SHA-256" },

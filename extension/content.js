@@ -3,13 +3,12 @@
   const MARK = "data-hmp";
   const ATTRS = ["placeholder", "title", "alt", "aria-label", "value"];
   const SKIP = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "TEMPLATE"]);
-  let cfg, re;
+  let re;
+  const byText = new Map();
 
   const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-  function hideText(text) {
-    return cfg.mode === "delete" ? "" : cfg.replacement;
-  }
+  const lookup = (m) => byText.get(m.toLowerCase()) || { mode: "delete", replacement: "" };
 
   function processTextNode(node) {
     const parent = node.parentNode;
@@ -18,24 +17,27 @@
     re.lastIndex = 0;
     if (!re.test(text)) return;
     re.lastIndex = 0;
-    if (cfg.mode === "blur") {
-      const frag = document.createDocumentFragment();
-      let last = 0, m;
-      while ((m = re.exec(text))) {
-        frag.append(text.slice(last, m.index));
+    const frag = document.createDocumentFragment();
+    let last = 0, m, blurred = false;
+    while ((m = re.exec(text))) {
+      const it = lookup(m[0]);
+      frag.append(text.slice(last, m.index));
+      if (it.mode === "blur") {
+        blurred = true;
         const span = document.createElement("span");
         span.setAttribute(MARK, "1");
         span.style.setProperty("filter", "blur(6px)", "important");
         span.style.setProperty("user-select", "none", "important");
         span.textContent = m[0];
         frag.append(span);
-        last = m.index + m[0].length;
+      } else {
+        frag.append(it.mode === "delete" ? "" : it.replacement);
       }
-      frag.append(text.slice(last));
-      parent.replaceChild(frag, node);
-    } else {
-      node.nodeValue = text.replace(re, () => hideText());
+      last = m.index + m[0].length;
     }
+    frag.append(text.slice(last));
+    if (blurred) parent.replaceChild(frag, node);
+    else node.nodeValue = frag.textContent;
   }
 
   function processElementAttrs(el) {
@@ -46,11 +48,11 @@
       re.lastIndex = 0;
       if (re.test(v)) {
         re.lastIndex = 0;
-        el.setAttribute(a, v.replace(re, () => (cfg.mode === "delete" ? "" : cfg.replacement)));
+        // attributes cannot be blurred, so blurred items are replaced there
+        el.setAttribute(a, v.replace(re, (m) => { const it = lookup(m); return it.mode === "delete" ? "" : it.replacement; }));
       }
     }
   }
-
   // Deep scan: every text node, open shadow roots, and same-origin iframes
   // (cross-origin frames run their own copy of this script via all_frames).
   function scan(root) {
@@ -72,6 +74,10 @@
       if (el.shadowRoot) scan(el.shadowRoot);
       if (/^i?frame$/i.test(el.nodeName)) {
         try {
+          if (!hooked.has(el)) {
+            hooked.add(el);
+            el.addEventListener("load", () => enqueue(el));
+          }
           if (el.contentDocument) {
             observe(el.contentDocument);
             scan(el.contentDocument);
@@ -81,7 +87,7 @@
     });
   }
 
-  const observed = new WeakSet();
+  const observed = new WeakSet(), hooked = new WeakSet();
   let queue = new Set(), scheduled = false;
   function flush() {
     scheduled = false;
@@ -109,15 +115,16 @@
   function start() {
     observe(document);
     scan(document);
-    // catches content added to iframes/shadow roots attached later
-    setInterval(() => scan(document), 3000);
   }
 
-  api.runtime.sendMessage({ type: "forHost", host: location.hostname }).then((res) => {
+  api.runtime.sendMessage({ type: "forHost" }).then((res) => {
     if (!res || !res.ok || !res.active) return;
-    cfg = res;
-    const items = [...res.items].sort((a, b) => b.length - a.length).map(esc);
+    res.items.forEach((it) => { if (!byText.has(it.text.toLowerCase())) byText.set(it.text.toLowerCase(), it); });
+    const items = [...byText.keys()].sort((a, b) => b.length - a.length).map(esc);
     re = new RegExp(items.join("|"), "gi");
+    // A replacement that itself matches a hidden text would be re-replaced forever by the observer.
+    byText.forEach((it) => { re.lastIndex = 0; if (it.mode === "replace" && re.test(it.replacement)) it.replacement = ""; });
+    re.lastIndex = 0;
     start();
   }).catch(() => {});
 })();
