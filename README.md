@@ -4,7 +4,7 @@ A browser extension (uses Manifest v3) that hides texts you choose on websites y
 
 ## Usage
 1. Click the extension icon. On first start you only choose a **master password** (min 8 characters).
-2. Add a text to hide, give it a **name** (optional for specific sites, where it defaults to the first site; **required** for all sites) and choose its scope: **All sites** or **Specific sites** (`example.com` also covers subdomains). Pick the action per item: default / blur / replace / delete (the default action is set at the bottom of the popup).
+2. Add a text to hide, give it a **name** (optional for specific sites as it defaults to the specific sites name; **required** for all sites) and choose its scope: **All sites** or **Specific sites** (`example.com` also covers subdomains). Pick the action per item: default / blur / replace / delete (the default action is set at the bottom of the popup).
 3. The list shows each item's name and `••••••••`. Click 👁 and enter the master password to reveal the text for 10 seconds. The badge shows the site, or "multi-site" (hover it to list the sites). Click ⚙ to edit an item at any time: rename, change its action, add/remove sites, or switch between specific sites and all sites.4. After a browser restart you are asked for the master password once; it stays unlocked until the browser closes or you press **Lock**.
 4. **Forgot the master password?** Use "Forgot master password?" on the unlock screen. It resets the vault and **deletes all saved texts, scopes and preferences**.
 5. The popup has a light/dark theme (follows the system, toggle with the 🌙/☀️ button).
@@ -40,6 +40,33 @@ Download or clone this repo; the extension is the `extension/` folder.
 2. Open `about:debugging#/runtime/this-firefox`.
 3. Click **Load Temporary Add-on…** and choose `dist/firefox/manifest.json` (removed when Firefox restarts; for permanent install, zip the folder contents and sign it via addons.mozilla.org).
 4. Firefox treats `<all_urls>` host access as optional: if the extension does nothing, open `about:addons` → Hide My Text → Permissions and allow access to all sites.
+
+## Package ZIPs for browser stores
+
+Run these commands from the repository root in PowerShell. They create upload packages under `dist\`. Node.js is needed for the Firefox build.
+
+### Chrome Web Store and Microsoft Edge Add-ons
+
+Chrome and Edge use the same Manifest V3 package. Create one ZIP for both stores:
+
+```powershell
+New-Item -ItemType Directory -Force .\dist | Out-Null; Compress-Archive -Path .\extension\* -DestinationPath .\dist\hide-my-text-chrome-edge.zip -Force
+```
+
+Upload `dist\hide-my-text-chrome-edge.zip` through the Chrome Web Store Developer Dashboard or Microsoft Edge Add-ons Partner Center. The ZIP contains the contents of `extension\` directly, so `manifest.json` is at the archive root.
+
+### Firefox Add-ons (AMO)
+
+Firefox needs a different background-script entry. Generate its package first, then zip the generated folder's contents:
+
+```powershell
+node .\scripts\build-firefox.js
+Compress-Archive -Path .\dist\firefox\* -DestinationPath .\dist\hide-my-text-firefox.zip -Force
+```
+
+Upload `dist\hide-my-text-firefox.zip` through the Firefox Add-on Developer Hub for review and signing. For subsequent releases, keep the same Firefox add-on ID in `scripts\build-firefox.js` and increase the extension `version` in `extension\manifest.json`.
+
+These are store-upload packages, not installers. For local testing, load the unpacked folder using the steps above. Do not zip the repository root: it contains documentation, tests, and build files that are not part of the extension package.
 
 ## Tests
 `node --test tests/vault.test.js` (Node 18+).
