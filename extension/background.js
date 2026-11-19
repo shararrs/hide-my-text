@@ -44,25 +44,35 @@ async function loadKey() {
   }
   return sessionKey;
 }
-const normHost = (h) => String(h).trim().toLowerCase().replace(/^[a-z]+:\/\//, "").replace(/[/:?#].*$/, "").replace(/^\*\./, "");
-const hostMatches = (host, sites) => sites.some((s) => host === s || host.endsWith("." + s));
+const cleanHost = (h) => String(h).trim().toLowerCase().replace(/^[a-z]+:\/\//, "").replace(/[/:?#].*$/, "").replace(/^\*\./, "").replace(/^www\./, "");
+const normHost = cleanHost;
+const hostMatches = (host, sites) => {
+  const ch = cleanHost(host);
+  return sites.some((s) => {
+    const cs = cleanHost(s);
+    return ch === cs || ch.endsWith("." + cs);
+  });
+};
 // Items are {name, text, sites, mode, replacement}. sites [] means every website; mode "" means the
 // default action. Legacy plain strings are migrated.
 function normItem(i) {
   const o = typeof i === "string" ? { text: i } : i || {};
   const sites = [...new Set((o.sites || []).map(normHost).filter(Boolean))];
+  const mode = ["blur", "replace", "delete"].includes(o.mode) ? o.mode : "blur";
+  const replacement = mode === "replace" ? (String(o.replacement ?? "").trim() || "•••") : String(o.replacement ?? "");
   return {
     name: String(o.name ?? "").trim() || sites[0] || "",
     text: String(o.text ?? "").trim(),
     sites,
-    mode: ["blur", "replace", "delete"].includes(o.mode) ? o.mode : "",
-    replacement: String(o.replacement ?? "")
+    mode,
+    replacement
   };
 }
 function checked(i) {
   const n = normItem(i);
   if (!n.text) throw new Error("Enter the text to hide");
-  if (!n.name) throw new Error("Give this item a name (needed when it applies to all sites)");
+  if (!n.name) throw new Error("Label is required for all sites to easily track");
+  if (!["blur", "replace", "delete"].includes(n.mode)) throw new Error("Please select an action: Blur, Replace With, or Delete");
   return n;
 }
 function normItems(items) {
@@ -140,12 +150,21 @@ const privileged = {
     await writeItems([...items, checked(item)]);
     return {};
   },
-  // Name, sites and action can be edited without the master password; the text itself is untouched.
-  async updateItem({ index, name, sites, mode, replacement }) {
+  // Name, text, sites and action can be edited. If text is provided, it updates the hidden text.
+  async updateItem({ index, name, text, sites, mode, replacement }) {
     const items = await readItems();
     if (!items) throw new Error("locked");
     needIndex(items, index);
-    items[index] = checked({ ...items[index], name, sites, mode, replacement });
+    const existing = items[index];
+    const newText = text !== undefined && text !== null ? String(text).trim() : existing.text;
+    items[index] = checked({
+      ...existing,
+      name: name !== undefined ? name : existing.name,
+      text: newText,
+      sites: sites !== undefined ? sites : existing.sites,
+      mode: mode !== undefined ? mode : existing.mode,
+      replacement: replacement !== undefined ? replacement : existing.replacement
+    });
     await writeItems(items);
     return {};
   },

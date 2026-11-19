@@ -1,7 +1,7 @@
 const api = globalThis.browser || globalThis.chrome;
 const $ = (id) => document.getElementById(id);
 const MASK = "••••••••";
-let items = [], settings = {};
+let items = [], selectedNewAction = "";
 
 async function call(msg) {
   const r = await api.runtime.sendMessage(msg);
@@ -44,7 +44,8 @@ $("theme").onclick = () => {
 };
 
 const open = new Set();
-const splitSites = (v) => v.split(/[,\s]+/).filter(Boolean);
+const cleanHost = (h) => String(h).trim().toLowerCase().replace(/^[a-z]+:\/\//, "").replace(/[/:?#].*$/, "").replace(/^\*\./, "").replace(/^www\./, "");
+const splitSites = (v) => v.split(/[,\s]+/).map(cleanHost).filter(Boolean);
 const sitesLabel = (it) => (!it.sites.length ? "all sites" : it.sites.length === 1 ? it.sites[0] : "multi-site");
 
 function mk(tag, props = {}, ...kids) {
@@ -52,22 +53,76 @@ function mk(tag, props = {}, ...kids) {
   el.append(...kids);
   return el;
 }
-function modeSelect(value) {
-  const s = mk("select");
-  [["", "Default action"], ["blur", "Blur"], ["replace", "Replace"], ["delete", "Delete"]].forEach(([v, t]) => s.append(mk("option", { value: v, textContent: t })));
-  s.value = value;
-  return s;
+function actionTabs(initialValue, onChange) {
+  const container = mk("div", { className: "btn-tabs", role: "group", "aria-label": "Hiding method" });
+  let currentVal = initialValue || "";
+  const buttons = [
+    { val: "blur", label: "Blur" },
+    { val: "replace", label: "Replace With" },
+    { val: "delete", label: "Delete" }
+  ].map(({ val, label }) => {
+    const btn = mk("button", {
+      type: "button",
+      className: currentVal === val ? "active" : "",
+      textContent: label,
+      "aria-pressed": currentVal === val ? "true" : "false"
+    });
+    btn.onclick = () => {
+      currentVal = val;
+      buttons.forEach((b) => {
+        const isActive = b === btn;
+        b.classList.toggle("active", isActive);
+        b.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+      onChange(currentVal);
+    };
+    container.append(btn);
+    return btn;
+  });
+  return {
+    el: container,
+    getValue: () => currentVal,
+    setValue: (val) => {
+      currentVal = val || "";
+      buttons.forEach((b, idx) => {
+        const v = ["blur", "replace", "delete"][idx];
+        const isActive = v === currentVal;
+        b.classList.toggle("active", isActive);
+        b.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+      onChange(currentVal);
+    }
+  };
 }
 
 function editor(it, i) {
   const draft = { sites: [...it.sites] };
   const box = mk("div", { className: "edit" });
-  const name = mk("input", { value: it.name, placeholder: "Name" });
-  const mode = modeSelect(it.mode);
-  const repl = mk("input", { value: it.replacement, placeholder: "Replacement text" });
-  const syncRepl = () => repl.classList.toggle("hidden", mode.value !== "replace");
-  mode.onchange = syncRepl;
-  syncRepl();
+  
+  const textInput = mk("input", { type: "password", placeholder: "Leave blank to keep current hidden text", autocomplete: "off" });
+  const toggleTextBtn = mk("button", { type: "button", className: "icon peek", textContent: "👁", title: "Toggle visibility" });
+  toggleTextBtn.onclick = () => {
+    const isPw = textInput.type === "password";
+    textInput.type = isPw ? "text" : "password";
+    toggleTextBtn.textContent = isPw ? "🙈" : "👁";
+  };
+  const textRow = mk("div", { className: "input-wrap", style: "margin: 3px 0;" }, textInput, toggleTextBtn);
+
+  const name = mk("input", { value: it.name, placeholder: "Label for the hidden text" });
+  const nameErr = mk("div", { className: "field-err hidden", textContent: "Label is required for all sites to easily track" });
+  name.oninput = () => {
+    name.classList.remove("input-error");
+    nameErr.classList.add("hidden");
+  };
+
+  const repl = mk("input", { value: it.replacement, placeholder: "Replacement text (default: •••)", "aria-label": "Replacement text (default: •••)" });
+  const actionErr = mk("div", { className: "field-err hidden", textContent: "Please select a method to hide text" });
+  const tabs = actionTabs(it.mode || "", (val) => {
+    actionErr.classList.add("hidden");
+    repl.classList.toggle("hidden", val !== "replace");
+  });
+  repl.classList.toggle("hidden", it.mode !== "replace");
+
   const list = mk("div");
   const drawSites = () => {
     list.textContent = "";
@@ -77,22 +132,51 @@ function editor(it, i) {
   };
   drawSites();
   const addSites = mk("input", { placeholder: "Add site(s), e.g. example.com" });
-  const addBtn = mk("button", { textContent: "Add", onclick: () => { splitSites(addSites.value).forEach((s) => draft.sites.push(s)); addSites.value = ""; drawSites(); } });
+  const addBtn = mk("button", { textContent: "Add", onclick: () => { splitSites(addSites.value).forEach((s) => { if (!draft.sites.includes(s)) draft.sites.push(s); }); addSites.value = ""; drawSites(); } });
   const curBtn = mk("button", { textContent: "Use current site", onclick: guard(async () => {
     const [tab] = await api.tabs.query({ active: true, currentWindow: true });
-    draft.sites.push(new URL(tab.url).hostname);
+    const host = cleanHost(new URL(tab.url).hostname);
+    if (host && !draft.sites.includes(host)) draft.sites.push(host);
     drawSites();
   }) });
-  const allBtn = mk("button", { textContent: "Switch to all sites", onclick: () => { draft.sites = []; drawSites(); } });
+  const allBtn = mk("button", { textContent: "All sites", onclick: () => { draft.sites = []; drawSites(); } });
   const save = mk("button", { className: "primary", textContent: "Save", onclick: guard(async () => {
-    draft.sites.push(...splitSites(addSites.value));
-    await call({ type: "updateItem", index: i, name: name.value, sites: draft.sites, mode: mode.value, replacement: repl.value });
+    splitSites(addSites.value).forEach((s) => { if (!draft.sites.includes(s)) draft.sites.push(s); });
+    if (!draft.sites.length && !name.value.trim()) {
+      name.classList.add("input-error");
+      nameErr.classList.remove("hidden");
+      name.focus();
+      return;
+    }
+    const chosenMode = tabs.getValue();
+    if (!chosenMode) {
+      actionErr.classList.remove("hidden");
+      tabs.el.querySelector("button")?.focus();
+      return;
+    }
+    const updatePayload = { index: i, name: name.value, sites: draft.sites, mode: chosenMode, replacement: repl.value.trim() || "•••" };
+    if (textInput.value) {
+      updatePayload.text = textInput.value;
+    }
+    await call({ type: "updateItem", ...updatePayload });
     open.delete(i);
     await refresh();
     await reloadTab();
   }) });
-  box.append(name, mode, repl, mk("h3", { textContent: "Sites" }), list, mk("div", { className: "row" }, addSites, addBtn),
-    mk("div", { className: "actions" }, curBtn, allBtn), save);
+  box.append(
+    mk("h3", { textContent: "Edit Text & Settings" }),
+    textRow,
+    mk("h3", { textContent: "Sites" }),
+    list,
+    mk("div", { className: "row" }, addSites, addBtn),
+    mk("div", { className: "actions" }, curBtn, allBtn),
+    name,
+    nameErr,
+    tabs.el,
+    actionErr,
+    repl,
+    save
+  );
   return box;
 }
 
@@ -117,20 +201,16 @@ function renderItems() {
       show.dataset.shown = "1";
       setTimeout(hide, 10000);
     });
-    const gear = mk("button", { className: "icon", textContent: "⚙", title: "Edit name, sites and action", onclick: () => { open.has(i) ? open.delete(i) : open.add(i); renderItems(); } });
+    const gear = mk("button", { className: "icon", textContent: "⚙", title: "Edit text, name, sites and action", onclick: () => { open.has(i) ? open.delete(i) : open.add(i); renderItems(); } });
     const del = mk("button", { className: "icon danger", textContent: "✕", onclick: guard(async () => { open.clear(); await call({ type: "removeItem", index: i }); await refresh(); await reloadTab(); }) });
-    const li = mk("li", {}, mk("div", { style: "flex:1;min-width:0" }, mk("div", { className: "name", textContent: it.name || "(unnamed)" }), sub), chip, show, gear, del);
+    const li = mk("li", {}, mk("div", { className: "item-info" }, mk("div", { className: "name", textContent: it.name || "(unnamed)" }), sub), chip, show, gear, del);
     const wrap = mk("div", { className: "item" }, li);
     if (open.has(i)) wrap.append(editor(it, i));
     ul.append(wrap);
   });
 }function render() {
   renderItems();
-  $("mode").value = settings.mode;
-  $("replacement").value = settings.replacement;
-  $("replacement").classList.toggle("hidden", settings.mode !== "replace");
 }
-async function saveSettings() { await call({ type: "saveSettings", settings }); await refresh(); await reloadTab(); }
 
 async function refresh() {
   const st = await call({ type: "status" });
@@ -144,7 +224,7 @@ async function refresh() {
     $("authBtn").dataset.init = st.initialized ? "1" : "";
     return;
   }
-  ({ items, settings } = await call({ type: "getData" }));
+  ({ items } = await call({ type: "getData" }));
   render();
 }
 
@@ -167,30 +247,122 @@ $("forgot").onclick = guard(async () => {
   await reloadTab();
 });
 
-document.querySelectorAll("input[name=scope]").forEach((r) => {
-  r.onchange = () => $("sitesBox").classList.toggle("hidden", document.querySelector("input[name=scope]:checked").value !== "some");
-});
+$("toggleNewText").onclick = () => {
+  const isPw = $("newText").type === "password";
+  $("newText").type = isPw ? "text" : "password";
+  $("toggleNewText").textContent = isPw ? "🙈" : "👁";
+};
+
+let selectedScope = "all";
+function setScope(scope) {
+  selectedScope = scope === "some" ? "some" : "all";
+  const isAll = selectedScope === "all";
+  $("scopeAll").classList.toggle("active", isAll);
+  $("scopeAll").setAttribute("aria-selected", isAll ? "true" : "false");
+  $("scopeSome").classList.toggle("active", !isAll);
+  $("scopeSome").setAttribute("aria-selected", !isAll ? "true" : "false");
+  $("sitesBox").classList.toggle("hidden", isAll);
+}
+
+$("scopeAll").onclick = () => setScope("all");
+$("scopeSome").onclick = () => setScope("some");
+$("scopeAll").onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setScope("all"); } };
+$("scopeSome").onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setScope("some"); } };
 $("addCurrent").onclick = guard(async () => {
   const [tab] = await api.tabs.query({ active: true, currentWindow: true });
-  const host = new URL(tab.url).hostname;
-  const cur = $("newSites").value.split(/[,\s]+/).filter(Boolean);
-  if (!cur.includes(host)) cur.push(host);
+  const host = cleanHost(new URL(tab.url).hostname);
+  const cur = splitSites($("newSites").value);
+  if (host && !cur.includes(host)) cur.push(host);
   $("newSites").value = cur.join(", ");
 });
-$("addText").onclick = guard(async () => {
-  const text = $("newText").value.trim();
-  if (!text) return;
-  const specific = document.querySelector("input[name=scope]:checked").value === "some";
-  const sites = specific ? splitSites($("newSites").value) : [];
-  if (specific && !sites.length) throw new Error("Enter at least one website or choose All sites");
-  await call({ type: "addItem", item: { name: $("newName").value, text, sites, mode: $("newMode").value, replacement: $("newReplacement").value } });
+$("newText").oninput = () => {
+  $("newText").classList.remove("input-error");
+  $("newTextErr").classList.add("hidden");
+};
+$("newSites").oninput = () => {
+  $("newSites").classList.remove("input-error");
+  $("newSitesErr").classList.add("hidden");
+};
+$("newName").oninput = () => {
+  $("newName").classList.remove("input-error");
+  $("newNameErr").classList.add("hidden");
+};
+
+const newActionBtns = document.querySelectorAll("#newActionTabs button");
+newActionBtns.forEach((btn) => {
+  btn.onclick = () => {
+    selectedNewAction = btn.dataset.val;
+    newActionBtns.forEach((b) => {
+      const isActive = b === btn;
+      b.classList.toggle("active", isActive);
+      b.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+    $("newActionTabs").classList.remove("input-error");
+    $("newActionErr").classList.add("hidden");
+    $("newReplacement").classList.toggle("hidden", selectedNewAction !== "replace");
+  };
+});
+
+function clearNewErrors() {
+  $("newText").classList.remove("input-error");
+  $("newTextErr").classList.add("hidden");
+  $("newSites").classList.remove("input-error");
+  $("newSitesErr").classList.add("hidden");
+  $("newName").classList.remove("input-error");
+  $("newNameErr").classList.add("hidden");
+  $("newActionTabs").classList.remove("input-error");
+  $("newActionErr").classList.add("hidden");
+}
+
+function resetNewForm() {
   $("newText").value = $("newSites").value = $("newName").value = $("newReplacement").value = "";
+  $("newText").type = "password";
+  $("toggleNewText").textContent = "👁";
+  clearNewErrors();
+  selectedNewAction = "";
+  newActionBtns.forEach((b) => {
+    b.classList.remove("active");
+    b.setAttribute("aria-pressed", "false");
+  });
+  $("newReplacement").classList.add("hidden");
+  setScope("all");
+}
+
+$("addText").onclick = guard(async () => {
+  clearNewErrors();
+  const text = $("newText").value.trim();
+  if (!text) {
+    $("newText").classList.add("input-error");
+    $("newTextErr").classList.remove("hidden");
+    $("newText").focus();
+    return;
+  }
+  const specific = selectedScope === "some";
+  const sites = specific ? splitSites($("newSites").value) : [];
+  if (specific && !sites.length) {
+    $("newSites").classList.add("input-error");
+    $("newSitesErr").classList.remove("hidden");
+    $("newSites").focus();
+    return;
+  }
+  if (!specific && !$("newName").value.trim()) {
+    $("newName").classList.add("input-error");
+    $("newNameErr").classList.remove("hidden");
+    $("newName").focus();
+    return;
+  }
+  if (!selectedNewAction) {
+    $("newActionTabs").classList.add("input-error");
+    $("newActionErr").classList.remove("hidden");
+    newActionBtns[0]?.focus();
+    return;
+  }
+  const replVal = selectedNewAction === "replace" ? ($("newReplacement").value.trim() || "•••") : "";
+  await call({ type: "addItem", item: { name: $("newName").value, text, sites, mode: selectedNewAction, replacement: replVal } });
+  resetNewForm();
   await refresh();
   await reloadTab();
 });
-$("newMode").onchange = () => $("newReplacement").classList.toggle("hidden", $("newMode").value !== "replace");
-$("mode").onchange = guard(async () => { settings.mode = $("mode").value; await saveSettings(); });
-$("replacement").onchange = guard(async () => { settings.replacement = $("replacement").value; await saveSettings(); });
 $("lock").onclick = guard(async () => { await call({ type: "lock" }); await refresh(); await reloadTab(); });
 
 guard(refresh)();

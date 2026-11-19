@@ -4,10 +4,19 @@ A browser extension (uses Manifest v3) that hides texts you choose on websites y
 
 ## Usage
 1. Click the extension icon. On first start you only choose a **master password** (min 8 characters).
-2. Add a text to hide, give it a **name** (optional for specific sites as it defaults to the specific sites name; **required** for all sites) and choose its scope: **All sites** or **Specific sites** (`example.com` also covers subdomains). Pick the action per item: default / blur / replace / delete (the default action is set at the bottom of the popup).
-3. The list shows each item's name and `••••••••`. Click 👁 and enter the master password to reveal the text for 10 seconds. The badge shows the site, or "multi-site" (hover it to list the sites). Click ⚙ to edit an item at any time: rename, change its action, add/remove sites, or switch between specific sites and all sites.4. After a browser restart you are asked for the master password once; it stays unlocked until the browser closes or you press **Lock**.
-4. **Forgot the master password?** Use "Forgot master password?" on the unlock screen. It resets the vault and **deletes all saved texts, scopes and preferences**.
-5. The popup has a light/dark theme (follows the system, toggle with the 🌙/☀️ button).
+2. **Add a text to hide**:
+   - **Text to hide**: Enter the text you want hidden. You can click the eye icon (👁) in the field to peek/verify your text.
+   - **Scope**: Choose **All sites** or **Specific sites** using standard keyboard tabs (`Tab` moves between both options, `Enter` or `Space` toggles; one option is always selected; `example.com` automatically strips `www.` and matches subdomains).
+   - **Label**: Enter an optional label for the hidden text (e.g. username, password, IP). If left blank for specific sites, it automatically defaults to the clean website name (ignoring `www.`). Required when scoped to all sites.
+   - **Hiding method**: Choose how matches are handled side-by-side: **Blur**, **Replace With** (enter custom replacement text; defaults to `•••`), or **Delete**.
+3. **Hidden texts list**:
+   - The list displays each item's label and `••••••••`.
+   - Click 👁 and enter your master password to reveal the secret text for 10 seconds.
+   - The badge displays the target site or "multi-site" (hover to view all sites).
+   - Click ⚙ to edit an item: change the hidden text (with peek toggle), update its label, switch between all sites and specific sites, or switch the action.
+4. After a browser restart you are asked for the master password once; it stays unlocked until the browser closes or you press **Lock**.
+5. **Forgot the master password?** Use "Forgot master password?" on the unlock screen. It resets the vault and **deletes all saved texts, scopes and preferences**.
+6. The popup supports light and dark themes (follows your system setting, or toggle manually with the 🌙/☀️ button).
 
 **Lock** locks the popup (viewing, revealing, editing need the master password again), but hiding on pages **keeps working** until the browser closes. After a browser restart nothing is hidden until you unlock once, because the texts exist only encrypted on disk. Hiding while fully locked would require storing the texts in plaintext, which is deliberately not done.
 ## Deep text search
@@ -22,7 +31,9 @@ The content script runs in every frame (`all_frames`) and scans all text nodes (
 - **Access control:** content scripts can only ask for the texts that apply to their own page host; the page itself has no access. Only the popup can read/modify the full data.
 - Code: `extension/vault.js` (crypto), `extension/background.js` (storage/session), `extension/content.js` (hiding).
 
-Limitations: blurred text is still present in the page DOM (devtools/page scripts can read it); use Replace or Delete for stronger hiding. Also, texts handed to the content script exist in page-script-inaccessible extension memory, but anyone with access to your unlocked browser profile can open the popup. Lock when away.
+Limitations:
+- **Restricted browser pages:** By design, Chromium browsers (Chrome, Edge) strictly forbid extensions from running content scripts or modifying DOM on the Chrome Web Store (`chromewebstore.google.com`), browser internal pages (`chrome://*`, `edge://*`), and protected system domains for browser security. Extensions cannot execute on these domains.
+- Blurred text is still present in the page DOM (devtools/page scripts can read it); use Replace or Delete for stronger hiding. Also, texts handed to the content script exist in page-script-inaccessible extension memory, but anyone with access to your unlocked browser profile can open the popup. Lock when away.
 
 ## Install (unpacked / developer mode)
 Download or clone this repo; the extension is the `extension/` folder.

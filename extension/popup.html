@@ -2,8 +2,42 @@
 <html><head><meta charset="utf-8"><title>Hide My Text</title>
 <link rel="icon" href="images/hide-my-text-32.png">
 <style>
-:root{--bg:#f4f5f8;--card:#fff;--text:#1b1d24;--muted:#6b7280;--border:#dfe2ea;--accent:#4f46e5;--accent-text:#fff;--danger:#d92d20;--chip:#eef0ff}
-:root[data-theme=dark]{--bg:#14161c;--card:#1e212b;--text:#e8eaf0;--muted:#9aa1b2;--border:#323646;--accent:#818cf8;--accent-text:#0f1020;--danger:#f97066;--chip:#2a2e44}
+:root{
+  --bg:#f4f5f8;
+  --card:#ffffff;
+  --text:#1b1d24;
+  --muted:#6b7280;
+  --border:#d1d5db;
+  --border-strong:#9ca3af;
+  --accent:#4f46e5;
+  --accent-hover:#4338ca;
+  --accent-text:#ffffff;
+  --danger:#dc2626;
+  --danger-bg:#fee2e2;
+  --chip:#e0e7ff;
+  --btn-bg:#ffffff;
+  --btn-border:#cbd5e1;
+  --btn-shadow:0 1px 3px rgba(0,0,0,0.08);
+  --tab-unselected-bg:#f8fafc;
+}
+:root[data-theme=dark]{
+  --bg:#12141a;
+  --card:#1c1f29;
+  --text:#f1f5f9;
+  --muted:#94a3b8;
+  --border:#334155;
+  --border-strong:#475569;
+  --accent:#6366f1;
+  --accent-hover:#4f46e5;
+  --accent-text:#ffffff;
+  --danger:#ef4444;
+  --danger-bg:#450a0a;
+  --chip:#2e3856;
+  --btn-bg:#262b38;
+  --btn-border:#3b4356;
+  --btn-shadow:0 1px 3px rgba(0,0,0,0.35);
+  --tab-unselected-bg:#202532;
+}
 *{box-sizing:border-box}
 body{font:14px system-ui,sans-serif;width:360px;margin:0;padding:14px;background:var(--bg);color:var(--text)}
 header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -12,20 +46,123 @@ header h1{font-size:16px;margin:0}
 h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 input,select{width:100%;margin:3px 0;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font:inherit}
 input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
-button{padding:7px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font:inherit;cursor:pointer}
-button:hover{border-color:var(--accent)}
-button.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent);width:100%;margin-top:4px}
+button{
+  padding:7px 12px;
+  border:1px solid var(--btn-border);
+  border-radius:6px;
+  background:var(--btn-bg);
+  color:var(--text);
+  font:inherit;
+  cursor:pointer;
+  box-shadow:var(--btn-shadow);
+  transition:all .15s ease;
+  font-weight:500;
+}
+button:hover{
+  border-color:var(--accent);
+  transform:translateY(-1px);
+  box-shadow:0 2px 5px rgba(0,0,0,0.12);
+}
+button:active{
+  transform:translateY(0);
+}
+button.primary{
+  background:var(--accent);
+  color:var(--accent-text);
+  border-color:var(--accent);
+  width:100%;
+  margin-top:4px;
+  font-weight:600;
+  box-shadow:0 2px 5px rgba(79,70,229,0.25);
+}
+button.primary:hover{
+  background:var(--accent-hover);
+  border-color:var(--accent-hover);
+}
 button.danger{color:var(--danger)}
-button.link{border:0;background:none;color:var(--muted);padding:4px 0;text-decoration:underline;width:auto}
+button.danger:hover{border-color:var(--danger);background:var(--danger-bg)}
+button.link{border:0;background:none;color:var(--muted);padding:4px 0;text-decoration:underline;width:auto;box-shadow:none;transform:none}
 button.icon{padding:4px 8px}
-.scope{display:flex;gap:14px;margin:6px 0}.scope label{display:flex;align-items:center;gap:4px;cursor:pointer}.scope input{width:auto;margin:0}
+.scope{display:flex;gap:8px;margin:8px 0}
+.scope-pill{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:7px 10px;
+  border:1.5px solid var(--border);
+  border-radius:8px;
+  background:var(--tab-unselected-bg);
+  cursor:pointer;
+  font-size:13px;
+  font-weight:500;
+  color:var(--muted);
+  box-shadow:var(--btn-shadow);
+  transition:all .15s ease;
+  user-select:none;
+}
+.scope-pill:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+.scope-pill:hover{border-color:var(--border-strong);color:var(--text);transform:translateY(-1px)}
+.scope-pill.active{
+  border-color:var(--accent);
+  background:var(--accent);
+  color:var(--accent-text);
+  font-weight:600;
+  box-shadow:0 2px 5px rgba(79,70,229,0.25);
+}
+  box-shadow:0 2px 5px rgba(79,70,229,0.25);
+}
 ul{padding:0;margin:0;list-style:none}
 li{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border)}li:last-child{border:0}
 li .txt{flex:1;word-break:break-all;font-family:ui-monospace,monospace}
-.chip{font-size:11px;background:var(--chip);color:var(--accent);padding:2px 7px;border-radius:99px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip{font-size:11px;background:var(--chip);color:var(--accent);padding:2px 7px;border-radius:99px;max-width:95px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
 .item{border-bottom:1px solid var(--border);padding:7px 0}.item:last-child{border:0}.item li{border:0;padding:0}
-.name{font-weight:600}.sub{font-size:12px;color:var(--muted);font-family:ui-monospace,monospace;word-break:break-all}
+.item-info{flex:1;min-width:0;overflow:hidden;margin-right:4px}
+.name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub{font-size:12px;color:var(--muted);font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.input-wrap{position:relative;display:flex;align-items:center}
+.input-wrap input{padding-right:34px}
+.input-wrap .peek{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);box-shadow:none}
+.input-wrap .peek:hover{color:var(--text);transform:translateY(-50%)}
+.btn-tabs{display:flex;gap:6px;margin:8px 0}
+.btn-tabs button{
+  flex:1;
+  padding:8px 4px;
+  font-size:12.5px;
+  font-weight:600;
+  border:1.5px solid var(--border);
+  border-radius:8px;
+  background:var(--tab-unselected-bg);
+  color:var(--text);
+  text-align:center;
+  box-shadow:var(--btn-shadow);
+  transition:all .15s ease;
+}
+.btn-tabs button:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+  transform:translateY(-1px);
+}
+.btn-tabs button.active{
+  background:var(--accent);
+  color:var(--accent-text);
+  border-color:var(--accent);
+  box-shadow:0 2px 6px rgba(79,70,229,0.3);
+}
 .edit{margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:8px}
+.field-err{color:var(--danger);font-size:11.5px;font-weight:500;margin:2px 0 6px;line-height:1.3}
+.input-error{
+  border-color:var(--danger)!important;
+  box-shadow:0 0 0 3px rgba(220,38,38,0.2), 0 0 10px rgba(220,38,38,0.35)!important;
+  animation: aura-pulse 1.8s infinite alternate;
+}
+@keyframes aura-pulse{
+  0%{box-shadow:0 0 0 2px rgba(220,38,38,0.2), 0 0 6px rgba(220,38,38,0.25)}
+  100%{box-shadow:0 0 0 3.5px rgba(220,38,38,0.35), 0 0 12px rgba(220,38,38,0.5)}
+}
 .edit .site{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:2px 0}
 .edit .row{display:flex;gap:6px}.edit .row input{flex:1}.edit .row button{width:auto}
 .edit .actions{display:flex;gap:6px;margin-top:6px}.edit .actions button{flex:1}
@@ -49,19 +186,30 @@ li .txt{flex:1;word-break:break-all;font-family:ui-monospace,monospace}
 <div id="main" class="hidden">
   <div class="card">
     <h3>Add text to hide</h3>
-    <input id="newName" placeholder="Name (required for all sites)">
-    <input id="newText" type="password" placeholder="Text to hide" autocomplete="off">
-    <div class="scope">
-      <label><input type="radio" name="scope" value="all" checked> All sites</label>
-      <label><input type="radio" name="scope" value="some"> Specific sites</label>
+    <div class="input-wrap">
+      <input id="newText" type="password" placeholder="Text to hide" autocomplete="off" aria-label="Text to hide" aria-describedby="newTextErr">
+      <button id="toggleNewText" type="button" class="icon peek" title="Toggle visibility" aria-label="Toggle text visibility">👁</button>
+    </div>
+    <div id="newTextErr" class="field-err hidden" role="alert">Please enter the text to hide</div>
+    <div class="scope" role="tablist" aria-label="Website scope">
+      <button type="button" id="scopeAll" class="scope-pill active" role="tab" aria-selected="true" tabindex="0">All sites</button>
+      <button type="button" id="scopeSome" class="scope-pill" role="tab" aria-selected="false" tabindex="0">Specific sites</button>
     </div>
     <div id="sitesBox" class="hidden">
-      <input id="newSites" placeholder="example.com, other.org">
-      <button id="addCurrent">Use current site</button>
+      <input id="newSites" placeholder="example.com, other.org" aria-label="Specific websites" aria-describedby="newSitesErr">
+      <div id="newSitesErr" class="field-err hidden" role="alert">Please enter at least one website</div>
+      <button id="addCurrent" type="button">Use current site</button>
     </div>
-    <select id="newMode"><option value="">Default action</option><option value="blur">Blur</option><option value="replace">Replace</option><option value="delete">Delete</option></select>
-    <input id="newReplacement" placeholder="Replacement text" class="hidden">
-    <button id="addText" class="primary">Add</button>
+    <input id="newName" placeholder="Label for the hidden text" aria-label="Label for the hidden text" aria-describedby="newNameErr">
+    <div id="newNameErr" class="field-err hidden" role="alert">Label is required for all sites to easily track</div>
+    <div class="btn-tabs" id="newActionTabs" role="group" aria-label="Hiding method" aria-describedby="newActionErr">
+      <button type="button" data-val="blur" aria-pressed="false">Blur</button>
+      <button type="button" data-val="replace" aria-pressed="false">Replace With</button>
+      <button type="button" data-val="delete" aria-pressed="false">Delete</button>
+    </div>
+    <div id="newActionErr" class="field-err hidden" role="alert">Please select a method to hide text</div>
+    <input id="newReplacement" placeholder="Replacement text (default: •••)" class="hidden" aria-label="Replacement text (default: •••)">
+    <button id="addText" class="primary" type="button">Add</button>
   </div>
 
   <div class="card">
@@ -69,11 +217,6 @@ li .txt{flex:1;word-break:break-all;font-family:ui-monospace,monospace}
     <ul id="items"></ul>
   </div>
 
-  <div class="card">
-    <h3>Default action</h3>
-    <select id="mode"><option value="blur">Blur</option><option value="replace">Replace</option><option value="delete">Delete</option></select>
-    <input id="replacement" placeholder="Replacement text">
-  </div>
   <button id="lock" class="primary">Lock</button>
 </div>
 <div id="modal" class="hidden"><div class="card"><p id="modalMsg"></p><input id="modalInput" type="password" placeholder="Master password"><div class="row"><button id="modalCancel">Cancel</button><button id="modalOk" class="primary" style="margin:0">OK</button></div></div></div>
