@@ -54,30 +54,42 @@ Download or clone this repo; the extension is the `extension/` folder.
 
 ## Package ZIPs for browser stores
 
-Run these commands from the repository root in PowerShell. They create upload packages under `dist\`. Node.js is needed for the Firefox build.
-
-### Chrome Web Store and Microsoft Edge Add-ons
-
-Chrome and Edge use the same Manifest V3 package. Create one ZIP for both stores:
+Run one command to build all three packages at once:
 
 ```powershell
-New-Item -ItemType Directory -Force .\dist | Out-Null; Compress-Archive -Path .\extension\* -DestinationPath .\dist\hide-my-text-chrome-edge.zip -Force
+node .\scripts\build-all.js
 ```
 
-Upload `dist\hide-my-text-chrome-edge.zip` through the Chrome Web Store Developer Dashboard or Microsoft Edge Add-ons Partner Center. The ZIP contains the contents of `extension\` directly, so `manifest.json` is at the archive root.
+This generates under `dist\`:
+| File | Store |
+|---|---|
+| `hide-my-text-chrome-edge.zip` | Chrome Web Store / Microsoft Edge Add-ons |
+| `hide-my-text-firefox.zip` | Firefox Add-on Developer Hub (AMO) |
 
-### Firefox Add-ons (AMO)
+The ZIPs contain the extension folder contents directly, so `manifest.json` is at the archive root. The Firefox package gets a modified manifest with the correct background-script entry and Gecko ID (see `scripts\build-firefox.js`).
 
-Firefox needs a different background-script entry. Generate its package first, then zip the generated folder's contents:
+Or build individually:
+
+### Chrome / Edge only
 
 ```powershell
+New-Item -ItemType Directory -Force -Path ".\dist"
+Compress-Archive -Path .\extension\* -DestinationPath .\dist\hide-my-text-chrome-edge.zip -Force
+```
+
+Upload `dist\hide-my-text-chrome-edge.zip` to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) or [Microsoft Edge Add-ons Partner Center](https://partner.microsoft.com/dashboard/microsoftedge/).
+
+### Firefox only
+
+```powershell
+New-Item -ItemType Directory -Force -Path ".\dist"
 node .\scripts\build-firefox.js
 Compress-Archive -Path .\dist\firefox\* -DestinationPath .\dist\hide-my-text-firefox.zip -Force
 ```
 
-Upload `dist\hide-my-text-firefox.zip` through the Firefox Add-on Developer Hub for review and signing. For subsequent releases, keep the same Firefox add-on ID in `scripts\build-firefox.js` and increase the extension `version` in `extension\manifest.json`.
+Upload `dist\hide-my-text-firefox.zip` through the [Firefox Add-on Developer Hub](https://addons.mozilla.org/developers/) for review and signing. For subsequent releases, keep the same add-on ID in `scripts\build-firefox.js` and bump `version` in `extension\manifest.json`.
 
-These are store-upload packages, not installers. For local testing, load the unpacked folder using the steps above. Do not zip the repository root: it contains documentation, tests, and build files that are not part of the extension package.
+These are store-upload packages, not installers. For local testing, load the unpacked folder using the steps in the Install section. Do not zip the repository root: it contains documentation, tests, and build files that are not part of the extension.
 
 ## Tests
 `node --test tests/vault.test.js` (Node 18+).
