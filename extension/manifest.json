@@ -8,7 +8,7 @@
     "48": "images/hide-my-text-48.png",
     "128": "images/hide-my-text-128.png"
   },
-  "description": "Hide your username, IP address and more. Hides (deletes, replaces or blurs) texts you choose on websites you choose. Great for Screen sharing on calls for professionals, streamers and content creators.",
+  "description": "Protect your privacy during screen shares, calls, and streams. Easily blur, replace, or hide usernames, IPs, and custom text.",
   "permissions": ["storage"],
   "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js" },
